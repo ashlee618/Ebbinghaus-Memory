@@ -263,24 +263,19 @@ class EbbinghausView extends ItemView {
             } else {
                 const reviewNumber = getReviewNumber(rowNumber, index);
                 if (reviewNumber === '-') {
-                    // 如果是 "-"，创建一个不可编辑的 div
                     cell.createEl("div", {
                         cls: "review-status disabled",
                         text: "-"
                     });
                 } else {
-                    // 如果不是 "-"，创建可编辑的输入框
-                    const input = cell.createEl("input", {
-                        type: "text",
-                        cls: "review-status",
-                        attr: { 
-                            maxlength: "2",
-                            placeholder: reviewNumber
-                        }
+                    const reviewCell = cell.createEl("div", {
+                        cls: "review-status review-cell-clickable",
+                        text: reviewNumber
                     });
 
-                    input.addEventListener("focus", (e) => {
-                        (e.target as HTMLInputElement).select();
+                    reviewCell.addEventListener("click", (e) => {
+                        const target = e.target as HTMLElement;
+                        target.classList.toggle("review-completed");
                     });
                 }
             }
@@ -396,8 +391,8 @@ class EbbinghausView extends ItemView {
             .review-status {
                 width: 100%;
                 text-align: center;
-                background-color: transparent !important;
-                border: none !important;
+                background-color: transparent;
+                border: none;
                 color: var(--text-normal);
                 outline: none;
                 -webkit-appearance: none;
@@ -408,7 +403,7 @@ class EbbinghausView extends ItemView {
             }
 
             .review-status:focus {
-                background-color: transparent !important;
+                background-color: transparent;
             }
 
             .content-cell {
@@ -476,6 +471,29 @@ class EbbinghausView extends ItemView {
                 cursor: not-allowed;
                 user-select: none;
                 font-size: 14px;
+            }
+
+            .review-cell-clickable {
+                cursor: pointer;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background-color 0.2s ease;
+            }
+
+            .review-cell-clickable:hover {
+                background-color: rgba(255, 192, 203, 0.3) !important;
+            }
+
+            .review-cell-clickable.review-completed {
+                background-color: pink !important;
+                color: black;
+            }
+
+            .review-cell-clickable.review-completed:hover {
+                background-color: #ffb6c1 !important;
             }
         `;
         document.head.appendChild(style);
