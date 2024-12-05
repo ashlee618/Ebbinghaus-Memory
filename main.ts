@@ -1,13 +1,16 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, ItemView, WorkspaceLeaf, MarkdownRenderer, ButtonComponent, TextComponent } from 'obsidian';
+import * as yaml from 'js-yaml';
 
 interface EbbinghausPluginSettings {
     reviewIntervals: number[];
     reviewHeaders: string[];
+    dataDirectory: string;
 }
 
 const DEFAULT_SETTINGS: EbbinghausPluginSettings = {
     reviewIntervals: [1, 2, 4, 7, 15, 30, 90, 180],
-    reviewHeaders: ["1天", "2天", "4天", "7天", "15天", "1月", "3月", "6月"]
+    reviewHeaders: ["1天", "2天", "4天", "7天", "15天", "1月", "3月", "6月"],
+    dataDirectory: "ebbinghaus"
 }
 
 export default class EbbinghausPlugin extends Plugin {
@@ -114,6 +117,17 @@ class EbbinghausSettingTab extends PluginSettingTab {
         containerEl.createEl('h2', {text: '艾宾浩斯记忆法设置'});
 
         new Setting(containerEl)
+            .setName('数据目录')
+            .setDesc('设置存放复习计划的目录')
+            .addText(text => text
+                .setPlaceholder('ebbinghaus')
+                .setValue(this.plugin.settings.dataDirectory)
+                .onChange(async (value) => {
+                    this.plugin.settings.dataDirectory = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
             .setName('复习间隔（天）')
             .setDesc('设置复习的间隔天数，用逗号分隔')
             .addText(text => text
@@ -138,7 +152,9 @@ class EbbinghausSettingTab extends PluginSettingTab {
 }
 
 class EbbinghausView extends ItemView {
-    private plugin: EbbinghausPlugin;
+    private reviewPlanFiles: TFile[] = [];
+    private currentFile: TFile | null = null;
+    private reviewData: { [key: string]: boolean } = {};  // 保存复习状态
 
     constructor(leaf: WorkspaceLeaf, plugin: EbbinghausPlugin) {
         super(leaf);
@@ -150,7 +166,7 @@ class EbbinghausView extends ItemView {
     }
 
     getDisplayText() {
-        return "艾宾浩斯复习计划";
+        return "艾宾浩复习计划";
     }
 
     async onOpen() {
@@ -158,17 +174,38 @@ class EbbinghausView extends ItemView {
         container.empty();
         container.addClass('ebbinghaus-container');
 
-        container.createEl("h4", { text: "艾宾浩斯复习计划" });
+        // 添加文件选择下拉框
+        const fileSelector = container.createEl("div", { cls: "file-selector" });
+        const select = fileSelector.createEl("select", { cls: "file-select" });
+        
+        // 加载文件列表
+        await this.loadReviewPlanFiles();
+        
+        // 创建下拉选项
+        select.createEl("option", {
+            text: "请选择复习计划",
+            value: ""
+        });
 
-        const reviewPlanContainer = container.createEl("div", { cls: "review-plan-container" });
-        await this.createReviewPlan(reviewPlanContainer);
-
-        const buttonRow = container.createEl("div", { cls: "ebbinghaus-row" });
-        new ButtonComponent(buttonRow)
-            .setButtonText("生成复习计划")
-            .onClick(() => {
-                this.generateReviewPlan();
+        this.reviewPlanFiles.forEach(file => {
+            select.createEl("option", {
+                text: file.basename,
+                value: file.path
             });
+        });
+
+        // 添加选择事件
+        select.addEventListener("change", async (e) => {
+            const path = (e.target as HTMLSelectElement).value;
+            if (path) {
+                const file = this.app.vault.getAbstractFileByPath(path);
+                if (file instanceof TFile) {
+                    this.currentFile = file;
+                    await this.loadReviewData();
+                    await this.createReviewPlan(container as HTMLElement);
+                }
+            }
+        });
 
         this.addStyle();
         this.addResizeObserver();
@@ -179,6 +216,67 @@ class EbbinghausView extends ItemView {
             this.containerEl.classList.add('compact-view');
         } else {
             this.containerEl.classList.remove('compact-view');
+        }
+    }
+
+    // 加载复习计划文件列表
+    private async loadReviewPlanFiles() {
+        const directory = this.plugin.settings.dataDirectory;
+        const files = this.app.vault.getFiles();
+        this.reviewPlanFiles = files.filter(file => 
+            file.path.startsWith(directory) && file.extension === 'md'
+        );
+    }
+
+    // 加载复习数据
+    private async loadReviewData() {
+        if (this.currentFile) {
+            const content = await this.app.vault.read(this.currentFile);
+            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
+            const frontmatter = content.match(frontmatterRegex);
+            
+            if (frontmatter) {
+                const reviewDataRegex = /reviewData:\n([\s\S]*?)(\n\S|$)/;
+                const reviewDataMatch = frontmatter[1].match(reviewDataRegex);
+                
+                if (reviewDataMatch) {
+                    const reviewDataLines = reviewDataMatch[1].trim().split('\n');
+                    this.reviewData = {};
+                    reviewDataLines.forEach(line => {
+                        const [key, value] = line.split(': ');
+                        this.reviewData[key] = value === 'true';
+                    });
+                    
+                    // 重新渲染视图
+                    this.render();
+                }
+            }
+        }
+    }
+
+    // 保存复习数据
+    private async saveReviewData() {
+        if (this.currentFile) {
+            const content = await this.app.vault.read(this.currentFile);
+            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
+            const frontmatter = content.match(frontmatterRegex);
+            
+            // 将 reviewData 转换为简单的键值对格式
+            const reviewDataString = Object.entries(this.reviewData)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('\n');
+
+            let newContent;
+            if (frontmatter) {
+                // 替换现有的 reviewData 部分
+                const updatedFrontmatter = frontmatter[1].replace(/reviewData:([\s\S]*?)(\n\S|$)/, `reviewData:\n${reviewDataString}\n$2`);
+                newContent = content.replace(frontmatterRegex, `---\n${updatedFrontmatter}---`);
+            } else {
+                // 添加新的 reviewData 部分
+                newContent = `---\nreviewData:\n${reviewDataString}\n---\n\n${content}`;
+            }
+
+            await this.app.vault.modify(this.currentFile, newContent);
         }
     }
 
@@ -273,9 +371,21 @@ class EbbinghausView extends ItemView {
                         text: reviewNumber
                     });
 
-                    reviewCell.addEventListener("click", (e) => {
+                    // 生成唯一的复习记录 ID
+                    const reviewId = `row${rowNumber}_col${index}`;
+                    
+                    // 根据保存的数据设置初始状态
+                    if (this.reviewData[reviewId]) {
+                        reviewCell.classList.add("review-completed");
+                    }
+
+                    reviewCell.addEventListener("click", async (e) => {
                         const target = e.target as HTMLElement;
                         target.classList.toggle("review-completed");
+                        
+                        // 更新并保存数据
+                        this.reviewData[reviewId] = target.classList.contains("review-completed");
+                        await this.saveReviewData();
                     });
                 }
             }
@@ -291,7 +401,7 @@ class EbbinghausView extends ItemView {
             let isLearningContent = false;
 
             for (const line of lines) {
-                if (line.startsWith('# 学习内容')) {
+                if (line.startsWith('# 习内容')) {
                     isLearningContent = true;
                     continue;
                 }
@@ -495,6 +605,25 @@ class EbbinghausView extends ItemView {
             .review-cell-clickable.review-completed:hover {
                 background-color: #ffb6c1 !important;
             }
+
+            .file-selector {
+                margin-bottom: 20px;
+                width: 100%;
+            }
+
+            .file-select {
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--background-modifier-border);
+                border-radius: 4px;
+                background-color: var(--background-primary);
+                color: var(--text-normal);
+            }
+
+            .file-select:focus {
+                outline: none;
+                border-color: var(--interactive-accent);
+            }
         `;
         document.head.appendChild(style);
     }
@@ -509,7 +638,7 @@ class EbbinghausView extends ItemView {
                 // 每个复习日期栏的宽度
                 const reviewColumnWidth = 42;
                 
-                // 获取所有复习日期单元格（按列分组）
+                // 获取所有复习日期单元格（按列分）
                 const reviewDateColumns = [];
                 for (let i = 0; i < 8; i++) { // 8个复习日期列
                     const column = this.containerEl.querySelectorAll(`.review-cell:nth-child(${i + 4})`);
@@ -573,5 +702,11 @@ class EbbinghausView extends ItemView {
         }
         
         return 0;  // 显示 '-'
+    }
+
+    private render() {
+        // 在这里实现视图更新逻辑
+        console.log("Rendering view with review data:", this.reviewData);
+        // 例如，更新 DOM 元素或其他 UI 组件
     }
 }
