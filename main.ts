@@ -1,5 +1,4 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, ItemView, WorkspaceLeaf, MarkdownRenderer, ButtonComponent, TextComponent } from 'obsidian';
-import * as yaml from 'js-yaml';
 
 interface EbbinghausPluginSettings {
     reviewIntervals: number[];
@@ -154,7 +153,8 @@ class EbbinghausSettingTab extends PluginSettingTab {
 class EbbinghausView extends ItemView {
     private reviewPlanFiles: TFile[] = [];
     private currentFile: TFile | null = null;
-    private reviewData: { [key: string]: boolean } = {};  // 保存复习状态
+    private reviewData: { [key: string]: boolean } = {};
+    private plugin: EbbinghausPlugin;
 
     constructor(leaf: WorkspaceLeaf, plugin: EbbinghausPlugin) {
         super(leaf);
@@ -232,25 +232,40 @@ class EbbinghausView extends ItemView {
     private async loadReviewData() {
         if (this.currentFile) {
             const content = await this.app.vault.read(this.currentFile);
-            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
-            const frontmatter = content.match(frontmatterRegex);
+            const lines = content.split('\n');
             
-            if (frontmatter) {
-                const reviewDataRegex = /reviewData:\n([\s\S]*?)(\n\S|$)/;
-                const reviewDataMatch = frontmatter[1].match(reviewDataRegex);
+            // 重置复习数据
+            this.reviewData = {};
+            
+            let isDayPlanner = false;
+            for (const line of lines) {
+                if (line.startsWith('# Day planner')) {
+                    isDayPlanner = true;
+                    continue;
+                }
                 
-                if (reviewDataMatch) {
-                    const reviewDataLines = reviewDataMatch[1].trim().split('\n');
-                    this.reviewData = {};
-                    reviewDataLines.forEach(line => {
-                        const [key, value] = line.split(': ');
-                        this.reviewData[key] = value === 'true';
-                    });
-                    
-                    // 重新渲染视图
-                    this.render();
+                if (isDayPlanner && line.startsWith('#')) {
+                    break;
+                }
+                
+                if (isDayPlanner && line.trim().startsWith('-')) {
+                    // 解析格式如 "- 2：1" 的行
+                    const match = line.trim().match(/- (\d+)：(.+)/);
+                    if (match) {
+                        const rowNum = match[1];
+                        const statuses = match[2].split('');
+                        
+                        // 将状态存储到 reviewData 中
+                        statuses.forEach((status, index) => {
+                            const reviewId = `row${rowNum}_col${index + 3}`; // col从3开始（跳过序号、日期、内容列）
+                            this.reviewData[reviewId] = status === '1';
+                        });
+                    }
                 }
             }
+            
+            // 重新渲染视图
+            this.render();
         }
     }
 
@@ -258,24 +273,50 @@ class EbbinghausView extends ItemView {
     private async saveReviewData() {
         if (this.currentFile) {
             const content = await this.app.vault.read(this.currentFile);
-            const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
-            const frontmatter = content.match(frontmatterRegex);
+            const lines = content.split('\n');
             
-            // 将 reviewData 转换为简单的键值对格式
-            const reviewDataString = Object.entries(this.reviewData)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join('\n');
-
-            let newContent;
-            if (frontmatter) {
-                // 替换现有的 reviewData 部分
-                const updatedFrontmatter = frontmatter[1].replace(/reviewData:([\s\S]*?)(\n\S|$)/, `reviewData:\n${reviewDataString}\n$2`);
-                newContent = content.replace(frontmatterRegex, `---\n${updatedFrontmatter}---`);
+            // 将复习数据转换为新格式
+            const reviewLines = ['# Day planner'];
+            
+            // 获取所有行号
+            const rowNumbers = [...new Set(
+                Object.keys(this.reviewData)
+                    .map(key => parseInt(key.match(/row(\d+)/)?.[1] || '0'))
+            )].sort((a, b) => a - b);
+            
+            // 为每一行生成状态字符串
+            rowNumbers.forEach(rowNum => {
+                let statusString = '';
+                // 遍历该行的所有复习状态
+                for (let col = 3; col <= 10; col++) {
+                    const reviewId = `row${rowNum}_col${col}`;
+                    if (reviewId in this.reviewData) {
+                        statusString += this.reviewData[reviewId] ? '1' : '0';
+                    }
+                }
+                if (statusString.length > 0) {
+                    reviewLines.push(`- ${rowNum}：${statusString}`);
+                }
+            });
+            
+            // 替换或添加 Day planner 部分
+            let newContent = content;
+            const plannerStart = content.indexOf('# Day planner');
+            if (plannerStart !== -1) {
+                // 找到下一个标题或文件末尾
+                const nextHeading = content.slice(plannerStart + 1).search(/\n#/);
+                const plannerEnd = nextHeading !== -1 
+                    ? plannerStart + nextHeading + 1 
+                    : content.length;
+                
+                newContent = content.slice(0, plannerStart) + 
+                            reviewLines.join('\n') + '\n\n' +
+                            content.slice(plannerEnd);
             } else {
-                // 添加新的 reviewData 部分
-                newContent = `---\nreviewData:\n${reviewDataString}\n---\n\n${content}`;
+                // 如果不存在 Day planner 部分，添加到文件末尾
+                newContent = content + '\n\n' + reviewLines.join('\n') + '\n';
             }
-
+            
             await this.app.vault.modify(this.currentFile, newContent);
         }
     }
@@ -372,7 +413,8 @@ class EbbinghausView extends ItemView {
                     });
 
                     // 生成唯一的复习记录 ID
-                    const reviewId = `row${rowNumber}_col${index}`;
+                    const cellKey =`row${rowNumber}_col${index}`;
+                    const reviewId = cellKey;
                     
                     // 根据保存的数据设置初始状态
                     if (this.reviewData[reviewId]) {
@@ -695,7 +737,7 @@ class EbbinghausView extends ItemView {
             return 0;  // 返回0表示显示'-'
         }
 
-        // 对于其他行，如果列索引小于等于行号-2，则显示行号-1
+        // 对于其他行，如果列索引小于等于行-2，则显示行号-1
         // 否则显示 '-'
         if (colIndex <= rowNum - 2) {
             return rowNum - 1;
