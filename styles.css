@@ -315,3 +315,58 @@ If your plugin does not need CSS, delete this file.
 .ebbinghaus-table input[type="date"]:hover {
     background-color: var(--background-modifier-form-field-highlight);
 }
+
+.control-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.new-plan-button {
+    padding: 8px 16px;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.new-plan-button:hover {
+    background-color: var(--interactive-accent-hover);
+}
+
+.file-select {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 14px;
+    height: auto;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+}
+
+.file-select option {
+    padding: 8px;
+    font-size: 14px;
+    line-height: 1.2;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+}
+
+.file-select:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+/* 确保下拉选项完整显示 */
+.file-select, .file-select option {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, ItemView, WorkspaceLeaf, MarkdownRenderer, ButtonComponent, TextComponent } from 'obsidian';
+import { App, ItemView, MarkdownRenderer, Notice, Plugin, PluginSettingTab, Setting, TFile, WorkspaceLeaf } from 'obsidian';
 
 interface EbbinghausPluginSettings {
     reviewIntervals: number[];
@@ -174,35 +174,48 @@ class EbbinghausView extends ItemView {
         container.empty();
         container.addClass('ebbinghaus-container');
 
-        // 添加文件选择下拉框
-        const fileSelector = container.createEl("div", { cls: "file-selector" });
-        const select = fileSelector.createEl("select", { cls: "file-select" });
+        // 创建顶部控制区域
+        const controlArea = container.createEl("div", { cls: "control-area" });
         
+        // 添加新建按钮
+        const newPlanButton = controlArea.createEl("button", {
+            cls: "new-plan-button",
+            text: "新建复习计划"
+        });
+        
+        // 添加文件选择下拉框
+        const fileSelector = controlArea.createEl("select", { cls: "file-select" });
+
+        // 为新建按钮添加点击事件
+        newPlanButton.addEventListener("click", async () => {
+            await this.createNewReviewPlan();
+        });
+
         // 加载文件列表
         await this.loadReviewPlanFiles();
         
         // 创建下拉选项
-        select.createEl("option", {
+        fileSelector.createEl("option", {
             text: "请选择复习计划",
             value: ""
         });
 
         this.reviewPlanFiles.forEach(file => {
-            select.createEl("option", {
+            fileSelector.createEl("option", {
                 text: file.basename,
                 value: file.path
             });
         });
 
         // 添加选择事件
-        select.addEventListener("change", async (e) => {
+        fileSelector.addEventListener("change", async (e) => {
             const path = (e.target as HTMLSelectElement).value;
             if (path) {
                 const file = this.app.vault.getAbstractFileByPath(path);
                 if (file instanceof TFile) {
                     this.currentFile = file;
                     await this.loadReviewData();
-                    await this.createReviewPlan(container as HTMLElement);
+                    await this.createReviewPlan(container);
                 }
             }
         });
@@ -322,6 +335,16 @@ class EbbinghausView extends ItemView {
     }
 
     async createReviewPlan(container: HTMLElement) {
+        // 清空除了控制区域以外的所有内容
+        const controlArea = container.querySelector('.control-area');
+        container.empty();
+        
+        // 重新添加控制区域
+        if (controlArea) {
+            container.appendChild(controlArea);
+        }
+
+        // 创建表格内容
         const reviewHeaders = this.plugin.settings.reviewHeaders;
         const headers = ["#", "日期", "学习内容", ...reviewHeaders];
         
@@ -340,12 +363,11 @@ class EbbinghausView extends ItemView {
             this.createRow(tableBody, i, learningContent);
         }
 
-        // 修改添加行按钮的创建方式
+        // 添加行按钮
         const addRowButton = container.createEl("div", { 
             cls: "add-row-button review-row"
         });
         
-        // 创建一个跨越整行的单元格
         const fullRowCell = addRowButton.createEl("div", {
             cls: "review-cell full-row",
             text: "添加行"
@@ -750,5 +772,78 @@ class EbbinghausView extends ItemView {
         // 在这里实现视图更新逻辑
         console.log("Rendering view with review data:", this.reviewData);
         // 例如，更新 DOM 元素或其他 UI 组件
+    }
+
+    // 添加新建复习计划的方法
+    private async createNewReviewPlan() {
+        // 生成文件名，格式：YYYY-MM-DD-HH-mm-ss-review-plan.md
+        const date = new Date();
+        const fileName = `${date.getFullYear()}-${
+            String(date.getMonth() + 1).padStart(2, '0')}-${
+            String(date.getDate()).padStart(2, '0')}-${
+            String(date.getHours()).padStart(2, '0')}-${
+            String(date.getMinutes()).padStart(2, '0')}-${
+            String(date.getSeconds()).padStart(2, '0')}-review-plan.md`;
+        
+        // 确保目录存在
+        const directory = this.plugin.settings.dataDirectory;
+        if (!(await this.app.vault.adapter.exists(directory))) {
+            await this.app.vault.createFolder(directory);
+        }
+
+        // 生成文件路径
+        const filePath = `${directory}/${fileName}`;
+
+        // 生成初始内容
+        const initialContent = this.generateInitialContent();
+
+        try {
+            // 创建文件
+            const file = await this.app.vault.create(filePath, initialContent);
+            
+            // 刷新文件列表
+            await this.loadReviewPlanFiles();
+            
+            // 更新下拉框
+            const fileSelector = this.containerEl.querySelector('.file-select') as HTMLSelectElement;
+            if (fileSelector) {
+                fileSelector.innerHTML = '<option value="">请选择复习计划</option>';
+                this.reviewPlanFiles.forEach(file => {
+                    const option = fileSelector.createEl("option", {
+                        text: file.basename,
+                        value: file.path
+                    });
+                });
+                
+                // 选中新创建的文件
+                fileSelector.value = file.path;
+                
+                // 触发change事件
+                fileSelector.dispatchEvent(new Event('change'));
+            }
+
+            new Notice('成功创建新的复习计划！');
+        } catch (error) {
+            new Notice('创建复习计划失败！');
+            console.error('Failed to create review plan:', error);
+        }
+    }
+
+    // 生成初始文件内容
+    private generateInitialContent(): string {
+        return `---
+created: ${new Date().toISOString()}
+type: review-plan
+---
+
+# 复习计划
+
+## 学习内容
+
+[在这里添加要复习的内容]
+
+# Day planner
+
+`;
     }
 }
