@@ -127,7 +127,10 @@ If your plugin does not need CSS, delete this file.
     font-size: 12px;
     color: var(--text-normal);
     background-color: var(--background-primary);
-    padding: 20px;
+    padding: 10px;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
 }
 
 .ebbinghaus-table-container {
@@ -369,4 +372,119 @@ If your plugin does not need CSS, delete this file.
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.review-row {
+    display: flex;
+    border-bottom: 1px solid var(--background-modifier-border);
+    flex-wrap: nowrap;
+    background-color: var(--background-primary);
+}
+
+.review-cell {
+    flex: 1;
+    padding: 5px;
+    border-right: 1px solid var(--background-modifier-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    overflow: hidden;
+    background-color: var(--background-primary);
+}
+
+.review-cell:nth-child(1) { 
+    flex: 0 0 30px;
+    min-width: 30px;
+}
+
+.review-cell:nth-child(2) { 
+    flex: 0 0 130px;
+    min-width: 130px;
+}
+
+.review-cell:nth-child(3) { 
+    flex: 0 0 200px;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.review-cell:nth-child(n+4) { 
+    flex: 0 0 42px;
+    min-width: 42px;
+}
+
+.review-row.header {
+    font-weight: bold;
+    background-color: var(--background-secondary);
+}
+
+.content-cell {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    max-height: 100px;
+    text-align: left;
+}
+
+.content-cell p {
+    margin: 0;
+    text-align: left;
+}
+
+.content-cell ul, .content-cell ol {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.compact-view .review-cell:nth-child(3) {
+    flex: 1 !important;
+}
+
+.review-cell-clickable {
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.review-cell-clickable:hover {
+    background-color: rgba(255, 192, 203, 0.3) !important;
+}
+
+.review-cell-clickable.review-completed {
+    background-color: pink !important;
+    color: black;
+}
+
+.review-cell-clickable.review-completed:hover {
+    background-color: #ffb6c1 !important;
+}
+
+.add-row-button {
+    margin-top: -1px;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    cursor: pointer;
+    height: 32px;
+    transition: background-color 0.2s ease;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.add-row-button:hover {
+    background-color: var(--interactive-accent-hover);
+}
+
+.add-row-button .full-row {
+    flex: 1;
+    border: none;
+    font-size: 14px;
+    line-height: 32px;
+    text-align: center;
+    justify-content: center;
 }
