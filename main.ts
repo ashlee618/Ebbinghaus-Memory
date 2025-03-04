@@ -183,12 +183,27 @@ class EbbinghausView extends ItemView {
             text: "新建复习计划"
         });
         
+        // 创建选择器容器
+        const selectorContainer = controlArea.createEl("div", { cls: "selector-container" });
+        
         // 添加文件选择下拉框
-        const fileSelector = controlArea.createEl("select", { cls: "file-select" });
+        const fileSelector = selectorContainer.createEl("select", { cls: "file-select" });
+        
+        // 添加跳转按钮
+        const jumpButton = selectorContainer.createEl("button", {
+            cls: "jump-button",
+            text: "打开文件"
+        });
 
-        // 为新建按钮添加点击事件
-        newPlanButton.addEventListener("click", async () => {
-            await this.createNewReviewPlan();
+        // 为跳转按钮添加点击事件
+        jumpButton.addEventListener("click", async () => {
+            const selectedPath = fileSelector.value;
+            if (selectedPath) {
+                const file = this.app.vault.getAbstractFileByPath(selectedPath);
+                if (file instanceof TFile) {
+                    await this.app.workspace.getLeaf().openFile(file);
+                }
+            }
         });
 
         // 加载文件列表
@@ -250,26 +265,47 @@ class EbbinghausView extends ItemView {
             this.reviewData = {};
             
             let isDayPlanner = false;
+            let isLearningContent = false;
+            
             for (const line of lines) {
-                if (line.startsWith('# Day planner')) {
+                // 检查学习内容区域
+                if (line.startsWith('# Learning Content')) {
+                    isLearningContent = true;
+                    isDayPlanner = false;
+                    continue;
+                }
+                // 检查复习计划区域
+                else if (line.startsWith('# Day planner')) {
                     isDayPlanner = true;
+                    isLearningContent = false;
+                    continue;
+                }
+                // 遇到其他标题时重置标志
+                else if (line.startsWith('#')) {
+                    isDayPlanner = false;
+                    isLearningContent = false;
                     continue;
                 }
                 
-                if (isDayPlanner && line.startsWith('#')) {
-                    break;
+                // 处理学习内容
+                if (isLearningContent && line.trim().startsWith('-')) {
+                    const match = line.trim().match(/- (\d+)：(.+)/);
+                    if (match) {
+                        const rowNum = match[1];
+                        const content = match[2];
+                        const contentKey = `row${rowNum}_content`;
+                        this.reviewData[contentKey] = content;
+                    }
                 }
-                
-                if (isDayPlanner && line.trim().startsWith('-')) {
-                    // 解析格式如 "- 2：1" 的行
+                // 处理复习状态
+                else if (isDayPlanner && line.trim().startsWith('-')) {
                     const match = line.trim().match(/- (\d+)：(.+)/);
                     if (match) {
                         const rowNum = match[1];
                         const statuses = match[2].split('');
                         
-                        // 将状态存储到 reviewData 中
                         statuses.forEach((status, index) => {
-                            const reviewId = `row${rowNum}_col${index + 3}`; // col从3开始（跳过序号、日期、内容列）
+                            const reviewId = `row${rowNum}_col${index + 3}`;
                             this.reviewData[reviewId] = status === '1';
                         });
                     }
@@ -287,19 +323,31 @@ class EbbinghausView extends ItemView {
             const content = await this.app.vault.read(this.currentFile);
             const lines = content.split('\n');
             
-            // 将复习数据转换为新格式
+            // 准备学习内容数据
+            const learningLines = ['# Learning Content'];
+            // 准备复习状态数据
             const reviewLines = ['# Day planner'];
             
             // 获取所有行号
             const rowNumbers = [...new Set(
                 Object.keys(this.reviewData)
-                    .map(key => parseInt(key.match(/row(\d+)/)?.[1] || '0'))
+                    .map(key => {
+                        const match = key.match(/row(\d+)/);
+                        return match ? parseInt(match[1]) : null;
+                    })
+                    .filter(num => num !== null)
             )].sort((a, b) => a - b);
             
-            // 为每一行生成状态字符串
+            // 处理每一行的数据
             rowNumbers.forEach(rowNum => {
+                // 处理学习内容
+                const contentKey = `row${rowNum}_content`;
+                if (this.reviewData[contentKey]) {
+                    learningLines.push(`- ${rowNum}：${this.reviewData[contentKey]}`);
+                }
+                
+                // 处理复习状态
                 let statusString = '';
-                // 遍历该行的所有复习状态
                 for (let col = 3; col <= 10; col++) {
                     const reviewId = `row${rowNum}_col${col}`;
                     if (reviewId in this.reviewData) {
@@ -311,22 +359,37 @@ class EbbinghausView extends ItemView {
                 }
             });
             
-            // 替换或添加 Day planner 部分
+            // 构建新的文件内容
             let newContent = content;
-            const plannerStart = content.indexOf('# Day planner');
-            if (plannerStart !== -1) {
-                // 找到下一个标题或文件末尾
-                const nextHeading = content.slice(plannerStart + 1).search(/\n#/);
-                const plannerEnd = nextHeading !== -1 
-                    ? plannerStart + nextHeading + 1 
+            
+            // 更新或添加学习内容部分
+            const learningStart = content.indexOf('# Learning Content');
+            if (learningStart !== -1) {
+                const nextHeading = content.slice(learningStart + 1).search(/\n#/);
+                const learningEnd = nextHeading !== -1 
+                    ? learningStart + nextHeading + 1 
                     : content.length;
                 
-                newContent = content.slice(0, plannerStart) + 
-                            reviewLines.join('\n') + '\n\n' +
-                            content.slice(plannerEnd);
+                newContent = content.slice(0, learningStart) + 
+                            learningLines.join('\n') + '\n\n' +
+                            content.slice(learningEnd);
             } else {
-                // 如果不存在 Day planner 部分，添加到文件末尾
-                newContent = content + '\n\n' + reviewLines.join('\n') + '\n';
+                newContent = learningLines.join('\n') + '\n\n' + newContent;
+            }
+            
+            // 更新或添加复习计划部分
+            const plannerStart = newContent.indexOf('# Day planner');
+            if (plannerStart !== -1) {
+                const nextHeading = newContent.slice(plannerStart + 1).search(/\n#/);
+                const plannerEnd = nextHeading !== -1 
+                    ? plannerStart + nextHeading + 1 
+                    : newContent.length;
+                
+                newContent = newContent.slice(0, plannerStart) + 
+                            reviewLines.join('\n') + '\n\n' +
+                            newContent.slice(plannerEnd);
+            } else {
+                newContent = newContent + '\n\n' + reviewLines.join('\n') + '\n';
             }
             
             await this.app.vault.modify(this.currentFile, newContent);
@@ -417,9 +480,25 @@ class EbbinghausView extends ItemView {
                     value: rowDate.toISOString().split("T")[0]
                 });
             } else if (index === 2) {
-                const contentCell = cell.createEl("div", { cls: "content-cell" });
-                this.renderMarkdown(contentCell, learningContent);
-                this.addClickToOpenNote(contentCell, learningContent);
+                // 创建文本输入框
+                const textarea = cell.createEl("textarea", {
+                    cls: "content-input",
+                    attr: {
+                        placeholder: "输入学习内容"
+                    }
+                });
+                
+                // 如果有已保存的内容，显示出来
+                const contentKey = `row${rowNumber}_content`;
+                if (this.reviewData[contentKey]) {
+                    textarea.value = this.reviewData[contentKey];
+                }
+
+                // 添加内容变化监听
+                textarea.addEventListener("input", async () => {
+                    this.reviewData[contentKey] = textarea.value;
+                    await this.saveReviewData();
+                });
             } else {
                 const reviewNumber = getReviewNumber(rowNumber, index);
                 if (reviewNumber === '-') {
