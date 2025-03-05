@@ -292,7 +292,7 @@ If your plugin does not need CSS, delete this file.
   width: 80%;
 }
 
-/* 简化复习日期输入框样式 */
+/* 简化学习日期输入框样式 */
 .ebbinghaus-table input[type="date"] {
     border: none;
     background: transparent;

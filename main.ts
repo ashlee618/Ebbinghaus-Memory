@@ -74,10 +74,10 @@ tags: ebbinghaus
 
 [在这里记录你要记忆的内容]
 
-## 复习计划
+## 学习计划
 
 ${this.settings.reviewIntervals.map((interval, index) => 
-    `- [ ] 第${index + 1}次复习：${new Date(Date.now() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`
+    `- [ ] 第${index + 1}次学习：${new Date(Date.now() + interval * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`
 ).join('\n')}
 `;
     }
@@ -117,7 +117,7 @@ class EbbinghausSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('数据目录')
-            .setDesc('设置存放复习计划的目录')
+            .setDesc('设置存放学习计划的目录')
             .addText(text => text
                 .setPlaceholder('ebbinghaus')
                 .setValue(this.plugin.settings.dataDirectory)
@@ -127,8 +127,8 @@ class EbbinghausSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('复习间隔（天）')
-            .setDesc('设置复习的间隔天数，用逗号分隔')
+            .setName('学习间隔（天）')
+            .setDesc('设置学习的间隔天数，用逗号分隔')
             .addText(text => text
                 .setPlaceholder('1,2,4,7,15,30,90,180')
                 .setValue(this.plugin.settings.reviewIntervals.join(','))
@@ -138,8 +138,8 @@ class EbbinghausSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('复习栏表头')
-            .setDesc('设置复习栏的表头文字，用逗号分隔')
+            .setName('学习栏表头')
+            .setDesc('设置学习栏的表头文字，用逗号分隔')
             .addText(text => text
                 .setPlaceholder('1天,2天,4天,7天,15天,1月,3月,6月')
                 .setValue(this.plugin.settings.reviewHeaders.join(','))
@@ -166,7 +166,7 @@ class EbbinghausView extends ItemView {
     }
 
     getDisplayText() {
-        return "艾宾浩复习计划";
+        return "艾宾浩学习计划";
     }
 
     async onOpen() {
@@ -216,7 +216,7 @@ class EbbinghausView extends ItemView {
         
         // 创建下拉选项
         fileSelector.createEl("option", {
-            text: "请选择复习计划",
+            text: "请选择学习计划",
             value: ""
         });
 
@@ -312,7 +312,7 @@ class EbbinghausView extends ItemView {
         document.head.appendChild(style);
     }
 
-    // 加载复习计划文件列表
+    // 加载学习计划文件列表
     private async loadReviewPlanFiles() {
         const directory = this.plugin.settings.dataDirectory;
         const files = this.app.vault.getFiles();
@@ -321,13 +321,13 @@ class EbbinghausView extends ItemView {
         );
     }
 
-    // 加载复习数据
+    // 加载学习数据
     private async loadReviewData() {
         if (this.currentFile) {
             const content = await this.app.vault.read(this.currentFile);
             const lines = content.split('\n');
             
-            // 重置复习数据
+            // 重置学习数据
             this.reviewData = {};
             
             let isDayPlanner = false;
@@ -340,7 +340,7 @@ class EbbinghausView extends ItemView {
                     isDayPlanner = false;
                     continue;
                 }
-                // 检查复习计划区域
+                // 检查学习计划区域
                 else if (line.startsWith('# Day planner')) {
                     isDayPlanner = true;
                     isLearningContent = false;
@@ -363,7 +363,7 @@ class EbbinghausView extends ItemView {
                         this.reviewData[contentKey] = content;
                     }
                 }
-                // 处理复习状态
+                // 处理学习状态
                 else if (isDayPlanner && line.trim().startsWith('-')) {
                     const match = line.trim().match(/- (\d+)：(.+)/);
                     if (match) {
@@ -383,7 +383,7 @@ class EbbinghausView extends ItemView {
         }
     }
 
-    // 保存复习数据
+    // 保存学习数据
     private async saveReviewData() {
         if (this.currentFile) {
             const content = await this.app.vault.read(this.currentFile);
@@ -391,7 +391,7 @@ class EbbinghausView extends ItemView {
             
             // 准备学习内容数据
             const learningLines = ['# Learning Content'];
-            // 准备复习状态数据
+            // 准备学习状态数据
             const reviewLines = ['# Day planner'];
             
             // 获取所有行号
@@ -412,7 +412,7 @@ class EbbinghausView extends ItemView {
                     learningLines.push(`- ${rowNum}：${this.reviewData[contentKey]}`);
                 }
                 
-                // 处理复习状态
+                // 处理学习状态
                 let statusString = '';
                 for (let col = 3; col <= 10; col++) {
                     const reviewId = `row${rowNum}_col${col}`;
@@ -443,7 +443,7 @@ class EbbinghausView extends ItemView {
                 newContent = learningLines.join('\n') + '\n\n' + newContent;
             }
             
-            // 更新或添加复习计划部分
+            // 更新或添加学习计划部分
             const plannerStart = newContent.indexOf('# Day planner');
             if (plannerStart !== -1) {
                 const nextHeading = newContent.slice(plannerStart + 1).search(/\n#/);
@@ -519,7 +519,7 @@ class EbbinghausView extends ItemView {
         const getReviewNumber = (rowNum: number, colIndex: number): string => {
             const reviewMatrix: { [key: number]: { [key: number]: number } } = {};
             
-            // 动态生成复习矩阵
+            // 动态生成学习矩阵
             for (let i = 1; i <= 23; i++) {
                 reviewMatrix[i] = {};
                 for (let j = 3; j < headers.length; j++) {
@@ -578,7 +578,7 @@ class EbbinghausView extends ItemView {
                         text: reviewNumber
                     });
 
-                    // 生成唯一的复习记录 ID
+                    // 生成唯一的学习记录 ID
                     const cellKey =`row${rowNumber}_col${index}`;
                     const reviewId = cellKey;
                     
@@ -631,7 +631,7 @@ class EbbinghausView extends ItemView {
     }
 
     generateReviewPlan() {
-        // 生成复习计划的逻辑
+        // 生成学习计划的逻辑
     }
 
     addResizeObserver() {
@@ -641,17 +641,17 @@ class EbbinghausView extends ItemView {
                 
                 // 基础宽度（序号、日期、内容列的总宽度）
                 const baseWidth = 30 + 130 + 200; // 360px
-                // 每个复习日期栏的宽度
+                // 每个学习日期栏的宽度
                 const reviewColumnWidth = 42;
                 
-                // 获取所有复习日期单元格（按列分）
+                // 获取所有学习日期单元格（按列分）
                 const reviewDateColumns = [];
-                for (let i = 0; i < 8; i++) { // 8个复习日期列
+                for (let i = 0; i < 8; i++) { // 8个学习日期列
                     const column = this.containerEl.querySelectorAll(`.review-cell:nth-child(${i + 4})`);
                     reviewDateColumns.push(column);
                 }
                 
-                // 计算可以显示的复习日期列数
+                // 计算可以显示的学习日期列数
                 const availableWidth = width - baseWidth;
                 const visibleColumns = Math.floor(availableWidth / reviewColumnWidth);
                 
@@ -694,7 +694,7 @@ class EbbinghausView extends ItemView {
         });
     }
 
-    // 新增计算复习序号的方法
+    // 新增计算学习序号的方法
     private calculateReviewNumber(rowNum: number, colIndex: number): number {
         // 第一行全部显示 '-'
         if (rowNum === 1) {
@@ -716,7 +716,7 @@ class EbbinghausView extends ItemView {
         // 例如，更新 DOM 元素或其他 UI 组件
     }
 
-    // 添加新建复习计划的方法
+    // 添加新建学习计划的方法
     private async createNewReviewPlan() {
         // 生成文件名，格式：YYYY-MM-DD-HH-mm-ss-review-plan.md
         const date = new Date();
@@ -749,7 +749,7 @@ class EbbinghausView extends ItemView {
             // 更新下拉框
             const fileSelector = this.containerEl.querySelector('.file-select') as HTMLSelectElement;
             if (fileSelector) {
-                fileSelector.innerHTML = '<option value="">请选择复习计划</option>';
+                fileSelector.innerHTML = '<option value="">请选择学习计划</option>';
                 this.reviewPlanFiles.forEach(file => {
                     const option = fileSelector.createEl("option", {
                         text: file.basename,
@@ -764,9 +764,9 @@ class EbbinghausView extends ItemView {
                 fileSelector.dispatchEvent(new Event('change'));
             }
 
-            new Notice('成功创建新的复习计划！');
+            new Notice('成功创建新的学习计划！');
         } catch (error) {
-            new Notice('创建复习计划失败！');
+            new Notice('创建学习计划失败！');
             console.error('Failed to create review plan:', error);
         }
     }
@@ -778,11 +778,7 @@ created: ${new Date().toISOString()}
 type: review-plan
 ---
 
-# 复习计划
-
-## 学习内容
-
-[在这里添加要复习的内容]
+# Learning Content
 
 # Day planner
 
