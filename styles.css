@@ -321,56 +321,55 @@ If your plugin does not need CSS, delete this file.
 
 .control-area {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
     align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.new-plan-button {
+    white-space: nowrap;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    cursor: pointer;
+}
+
+.new-plan-button:hover {
+    background-color: var(--background-modifier-hover);
 }
 
 .selector-container {
     display: flex;
-    gap: 5px;
-    flex: 1;
     align-items: center;
-}
-
-.new-plan-button {
-    padding: 8px 16px;
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
+    gap: 8px;
+    flex: 1;
 }
 
 .file-select {
-    width: 200px; /* 限制下拉框宽度 */
-    padding: 8px;
-    border: 1px solid var(--background-modifier-border);
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
     border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
     background-color: var(--background-primary);
     color: var(--text-normal);
-    font-size: 14px;
-    height: auto;
-    line-height: 1.2;
 }
 
 .jump-button {
-    padding: 8px 16px;
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
     white-space: nowrap;
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    cursor: pointer;
 }
 
-.new-plan-button:hover,
 .jump-button:hover {
-    background-color: var(--interactive-accent-hover);
+    background-color: var(--background-modifier-hover);
 }
 
 .file-select option {

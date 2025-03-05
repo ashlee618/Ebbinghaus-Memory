@@ -180,9 +180,9 @@ class EbbinghausView extends ItemView {
         // 添加新建按钮
         const newPlanButton = controlArea.createEl("button", {
             cls: "new-plan-button",
-            text: "新建复习计划"
+            text: "新建学习计划"
         });
-        
+
         // 创建选择器容器
         const selectorContainer = controlArea.createEl("div", { cls: "selector-container" });
         
@@ -193,6 +193,11 @@ class EbbinghausView extends ItemView {
         const jumpButton = selectorContainer.createEl("button", {
             cls: "jump-button",
             text: "打开文件"
+        });
+
+        // 为新建按钮添加点击事件
+        newPlanButton.addEventListener("click", () => {
+            this.createNewReviewPlan();
         });
 
         // 为跳转按钮添加点击事件
@@ -244,6 +249,67 @@ class EbbinghausView extends ItemView {
         } else {
             this.containerEl.classList.remove('compact-view');
         }
+
+        this.addStyle();
+    }
+
+    addStyle() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .control-area {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px;
+                border-bottom: 1px solid var(--background-modifier-border);
+            }
+
+            .new-plan-button {
+                white-space: nowrap;
+                padding: 4px 12px;
+                border-radius: 4px;
+                border: 1px solid var(--background-modifier-border);
+                background-color: var(--background-primary);
+                color: var(--text-normal);
+                cursor: pointer;
+            }
+
+            .new-plan-button:hover {
+                background-color: var(--background-modifier-hover);
+            }
+
+            .selector-container {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+            }
+
+            .file-select {
+                flex: 1;
+                min-width: 0;
+                padding: 4px 8px;
+                border-radius: 4px;
+                border: 1px solid var(--background-modifier-border);
+                background-color: var(--background-primary);
+                color: var(--text-normal);
+            }
+
+            .jump-button {
+                white-space: nowrap;
+                padding: 4px 12px;
+                border-radius: 4px;
+                border: 1px solid var(--background-modifier-border);
+                background-color: var(--background-primary);
+                color: var(--text-normal);
+                cursor: pointer;
+            }
+
+            .jump-button:hover {
+                background-color: var(--background-modifier-hover);
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     // 加载复习计划文件列表
