@@ -153,7 +153,7 @@ class EbbinghausSettingTab extends PluginSettingTab {
 class EbbinghausView extends ItemView {
     private reviewPlanFiles: TFile[] = [];
     private currentFile: TFile | null = null;
-    private reviewData: { [key: string]: boolean } = {};
+    private reviewData: { [key: string]: string | boolean } = {};
     private plugin: EbbinghausPlugin;
 
     constructor(leaf: WorkspaceLeaf, plugin: EbbinghausPlugin) {
@@ -325,61 +325,40 @@ class EbbinghausView extends ItemView {
     private async loadReviewData() {
         if (this.currentFile) {
             const content = await this.app.vault.read(this.currentFile);
-            const lines = content.split('\n');
             
             // 重置学习数据
             this.reviewData = {};
             
-            let isDayPlanner = false;
-            let isLearningContent = false;
-            
-            for (const line of lines) {
-                // 检查学习内容区域
-                if (line.startsWith('# Learning Content')) {
-                    isLearningContent = true;
-                    isDayPlanner = false;
-                    continue;
-                }
-                // 检查学习计划区域
-                else if (line.startsWith('# Day planner')) {
-                    isDayPlanner = true;
-                    isLearningContent = false;
-                    continue;
-                }
-                // 遇到其他标题时重置标志
-                else if (line.startsWith('#')) {
-                    isDayPlanner = false;
-                    isLearningContent = false;
-                    continue;
-                }
+            // 处理学习内容部分
+            const learningContentMatch = content.match(/# Learning Content\n([\s\S]*?)(?=\n#|$)/);
+            if (learningContentMatch) {
+                const learningContentSection = learningContentMatch[1];
+                // 使用正则表达式匹配所有 "- 数字：|||内容|||" 格式的行
+                const contentMatches = learningContentSection.matchAll(/- (\d+)：\|\|\|([\s\S]*?)\|\|\|/g);
                 
-                // 处理学习内容
-                if (isLearningContent && line.trim().startsWith('-')) {
-                    const match = line.trim().match(/- (\d+)：(.+)/);
-                    if (match) {
-                        const rowNum = match[1];
-                        const content = match[2];
-                        const contentKey = `row${rowNum}_content`;
-                        this.reviewData[contentKey] = content;
-                    }
-                }
-                // 处理学习状态
-                else if (isDayPlanner && line.trim().startsWith('-')) {
-                    const match = line.trim().match(/- (\d+)：(.+)/);
-                    if (match) {
-                        const rowNum = match[1];
-                        const statuses = match[2].split('');
-                        
-                        statuses.forEach((status, index) => {
-                            const reviewId = `row${rowNum}_col${index + 3}`;
-                            this.reviewData[reviewId] = status === '1';
-                        });
-                    }
+                for (const match of contentMatches) {
+                    const rowNum = match[1];
+                    const content = match[2];
+                    this.reviewData[`row${rowNum}_content`] = content;
                 }
             }
             
-            // 重新渲染视图
-            this.render();
+            // 处理学习计划部分
+            const dayPlannerMatch = content.match(/# Day planner\n([\s\S]*?)(?=\n#|$)/);
+            if (dayPlannerMatch) {
+                const dayPlannerSection = dayPlannerMatch[1];
+                const statusMatches = dayPlannerSection.matchAll(/- (\d+)：(.+)/g);
+                
+                for (const match of statusMatches) {
+                    const rowNum = match[1];
+                    const statuses = match[2].split('');
+                    
+                    statuses.forEach((status, index) => {
+                        const reviewId = `row${rowNum}_col${index + 3}`;
+                        this.reviewData[reviewId] = status === '1';
+                    });
+                }
+            }
         }
     }
 
@@ -408,8 +387,12 @@ class EbbinghausView extends ItemView {
             rowNumbers.forEach(rowNum => {
                 // 处理学习内容
                 const contentKey = `row${rowNum}_content`;
-                if (this.reviewData[contentKey]) {
-                    learningLines.push(`- ${rowNum}：${this.reviewData[contentKey]}`);
+                if (contentKey in this.reviewData && this.reviewData[contentKey] !== undefined) {
+                    // 获取内容并处理多行
+                    const content = String(this.reviewData[contentKey]);
+                    
+                    // 使用 |||content||| 格式保存多行内容
+                    learningLines.push(`- ${rowNum}：|||${content}|||`);
                 }
                 
                 // 处理学习状态
@@ -556,13 +539,23 @@ class EbbinghausView extends ItemView {
                 
                 // 如果有已保存的内容，显示出来
                 const contentKey = `row${rowNumber}_content`;
-                if (this.reviewData[contentKey]) {
-                    textarea.value = this.reviewData[contentKey];
+                if (contentKey in this.reviewData && this.reviewData[contentKey] !== undefined) {
+                    // 确保内容是字符串并正确显示
+                    textarea.value = String(this.reviewData[contentKey]);
+                    
+                    // 调整文本框高度以适应内容
+                    textarea.style.height = 'auto';
+                    textarea.style.height = (textarea.scrollHeight) + 'px';
                 }
 
                 // 添加内容变化监听
                 textarea.addEventListener("input", async () => {
                     this.reviewData[contentKey] = textarea.value;
+                    
+                    // 调整文本框高度
+                    textarea.style.height = 'auto';
+                    textarea.style.height = (textarea.scrollHeight) + 'px';
+                    
                     await this.saveReviewData();
                 });
             } else {
