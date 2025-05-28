@@ -1,96 +1,117 @@
-# Obsidian Sample Plugin
+# Obsidian Ebbinghaus Memory Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+一个基于艾宾浩斯遗忘曲线的 Obsidian 学习记忆辅助插件。
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+## 功能特点
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+- 基于艾宾浩斯遗忘曲线的智能复习提醒
+- 自动生成复习计划和时间表
+- 记忆进度追踪和统计
+- 灵活的复习时间调整
+- 支持自定义复习间隔
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## 安装要求
 
-## First time developing plugins?
+- Obsidian v0.15.0 或更高版本
+- 支持所有 Obsidian 支持的平台（Windows、macOS、Linux、iOS、Android）
 
-Quick starting guide for new plugin devs:
+## 安装方法
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+### 从 Obsidian 社区插件商店安装
 
-## Releasing new releases
+1. 打开 Obsidian 设置
+2. 进入 `第三方插件`
+3. 确保 `安全模式` 已关闭
+4. 点击 `浏览` 进入社区插件列表
+5. 搜索 "Ebbinghaus Memory"
+6. 点击安装，然后启用插件
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+### 手动安装
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+1. 下载最新版本的发布包
+2. 解压文件到您的 Obsidian vault 的插件目录：`VaultFolder/.obsidian/plugins/`
+3. 重启 Obsidian
+4. 进入设置 > 第三方插件，启用本插件
 
-## Adding your plugin to the community plugin list
+## 使用方法
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+1. 在 Obsidian 中，使用命令面板（Ctrl/Cmd + P）
+2. 输入 "Ebbinghaus" 搜索相关命令
+3. 选择 "添加到复习计划"
+4. 根据提示选择要复习的内容
+5. 插件会自动根据艾宾浩斯遗忘曲线生成复习计划
 
-## How to use
+### 复习间隔
+默认的复习时间间隔：
+- 第1次复习：5分钟后
+- 第2次复习：30分钟后
+- 第3次复习：12小时后
+- 第4次复习：1天后
+- 第5次复习：2天后
+- 第6次复习：4天后
+- 第7次复习：7天后
+- 第8次复习：15天后
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## 自定义设置
 
-## Manually installing the plugin
+插件提供以下自定义选项：
+- 复习时间间隔调整
+- 提醒方式设置
+- 学习进度统计显示
+- 复习计划导出
+- 主题样式调整
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## 开发
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+如果您想参与开发，请按以下步骤操作：
 
-## Funding URL
+```bash
+# 克隆仓库
+git clone [repository-url]
 
-You can include funding URLs where people who use your plugin can financially support it.
+# 安装依赖
+npm install
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+# 开发模式
+npm run dev
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+# 构建
+npm run build
 ```
 
-If you have multiple URLs, you can also do:
+### 开发要求
+- Node.js 16+
+- npm 7+
+- TypeScript 4.7+
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+## 贡献指南
 
-## API Documentation
+欢迎提交 Pull Request 或创建 Issue。在提交之前，请确保：
 
-See https://github.com/obsidianmd/obsidian-api
+1. 代码符合项目的 TypeScript 规范
+2. 所有的改动都经过测试
+3. 更新相关文档
+4. 遵循现有的代码风格
+
+## 许可证
+
+本项目采用 MIT 许可证。
+
+## 更新日志
+
+### 1.0.0
+- 初始版本发布
+- 实现基于艾宾浩斯遗忘曲线的复习提醒
+- 支持自定义复习计划
+- 添加学习进度统计功能
+
+## 问题反馈
+
+如果您遇到任何问题或有功能建议，请：
+1. 在 GitHub 上创建 Issue
+2. 在 Obsidian 论坛上发帖
+3. 通过电子邮件联系开发者
+
+## 致谢
+
+感谢所有为这个项目做出贡献的开发者和用户。
