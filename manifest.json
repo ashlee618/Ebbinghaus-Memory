@@ -3,7 +3,7 @@
 	"name": "Ebbinghaus Memory",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "使用艾宾浩斯记忆法进行复习",
+	"description": "使用艾宾浩斯记忆法进行学习",
 	"author": "Your Name",
 	"authorUrl": "https://your-website.com",
 	"isDesktopOnly": false
