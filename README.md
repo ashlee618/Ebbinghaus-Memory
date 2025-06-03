@@ -10,6 +10,8 @@
 - 灵活的复习时间调整
 - 支持自定义复习间隔
 
+[![202506031643066.gif](https://i.postimg.cc/KYB4jcPw/202506031643066.gif)](https://postimg.cc/Y42tyHyz)
+
 ## 安装要求
 
 - Obsidian v0.15.0 或更高版本
@@ -41,7 +43,6 @@
 4. 根据提示选择要复习的内容
 5. 插件会自动根据艾宾浩斯遗忘曲线生成复习计划
 
-![CleanShot 2025-06-03 at 16.40.40.gif](https://hmf-typora-images.oss-cn-guangzhou.aliyuncs.com/images/202506031643066.gif)
 
 ## 自定义设置
 
