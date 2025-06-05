@@ -12,6 +12,8 @@
 
 [![202506031643066.gif](https://i.postimg.cc/KYB4jcPw/202506031643066.gif)](https://postimg.cc/Y42tyHyz)
 
+![系统自带大纲](public/example.gif)
+
 ## 安装要求
 
 - Obsidian v0.15.0 或更高版本
